@@ -8,9 +8,26 @@ app.init = function(){
   $(document).ready(function(){
     app.server = 'https://api.parse.com/1/classes/chatterbox';
     $('button.submit').on('click',function(){
-      app.send($('.input').val());
+        app.send($('.input').val());
       $('.input').val('');
     });
+    $('button.submit').on('mouseenter', function() {
+      $(this).text('Don\'t touch me');
+      alert('Don\'t even think about it.');
+    });
+    $('button.submit').on('mouseleave',function(){
+      $(this).text('Submit');
+    });
+    $('.input').on('keypress',function(e){
+      if(e.which === 13){
+        $('.submit').trigger('click');
+      }
+    });
+    app.fetch();
+    // setInterval(function(){
+    //   app.clearMessages();
+    //   app.fetch();
+    // },1000);
   });
 };
 
@@ -35,13 +52,19 @@ app.send = function(messageText){
   });
 };
 
+app.escapeHTML = function(s) {
+  return String(s).replace(/&(?!\w+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+};
+
 app.fetch = function(){
   $.ajax({
-    url: 'https://api.parse.com/1/classes/chatterbox',
+    url: 'https://api.parse.com/1/classes/chatterbox?order=createdAt',
     type: 'GET',
-    contentType: 'application/json',
     success: function (data) {
-      console.log(data);
+      for(var i = 0; i < data.results.length; i++){
+        app.addMessage(data.results[i]);
+      }
+      console.dir(data);
     },
     error : function (data) {
       console.error('chatterbox: Failed to get message');
@@ -54,7 +77,7 @@ app.clearMessages = function(){
 };
 
 app.addMessage = function(message){
-  var msg = '<p>' + message.username + ': ' + message.text + '</p>';
+  var msg = '<p>' + message.username + ': ' + app.escapeHTML(message.text) + '</p>';
   $('#chats').append(msg);
 };
 
