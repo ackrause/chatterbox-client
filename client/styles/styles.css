@@ -28,6 +28,7 @@ body {
 
 #main ul {
     padding-left: 20px;
+    list-style: none;
 }
 
 #main .error {
@@ -44,6 +45,11 @@ body {
     font-size: 12px;
     color: green;
     line-height: 13px;
+}
+
+#messageList {
+  float: right;
+  width: 50%;
 }
 
 form {
@@ -81,4 +87,9 @@ form input[type=text] {
 
 .spinner img {
     padding: 10px;
+}
+
+#roomSelect {
+  float:left;
+  width: 45%;
 }

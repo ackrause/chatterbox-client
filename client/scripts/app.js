@@ -1,42 +1,46 @@
-// YOUR CODE HERE:
+/* jshint quotmark:false */
+/* global $ */
 
 var app = {};
 
-app.rooms = {};
-
 app.init = function(){
-  $(document).ready(function(){
-    app.server = 'https://api.parse.com/1/classes/chatterbox';
-    $('button.submit').on('click',function(){
-        app.send($('.input').val());
-      $('.input').val('');
-    });
-    $('button.submit').on('mouseenter', function() {
-      $(this).text('Don\'t touch me');
-      alert('Don\'t even think about it.');
-    });
-    $('button.submit').on('mouseleave',function(){
-      $(this).text('Submit');
-    });
-    $('.input').on('keypress',function(e){
-      if(e.which === 13){
-        $('.submit').trigger('click');
-      }
-    });
-    app.fetch();
-    // setInterval(function(){
-    //   app.clearMessages();
-    //   app.fetch();
-    // },1000);
+
+  app.rooms = {"lobby":true};
+
+  app._currentRoom = "lobby";
+
+  app.server = 'https://api.parse.com/1/classes/chatterbox';
+  $('button.submit').on('click',function(){
+    app.send($('.input').val());
+    $('.input').val('');
   });
+  $('button.submit').on('mouseenter', function() {
+    $(this).text('Don\'t touch me');
+    alert('Don\'t even think about it.');
+  });
+  $('button.submit').on('mouseleave',function(){
+    $(this).text('Submit');
+  });
+  $('.input').on('keypress',function(e){
+    if(e.which === 13){
+      $('.submit').trigger('click');
+    }
+  });
+
+
+  app._username = window.location.search.slice(window.location.search.indexOf('=')+1);
+
+  app.fetch();
+  setInterval(function(){
+    app.fetch();
+  },1000);
 };
 
 app.send = function(messageText){
   var message = {};
-  var name = window.location.search;
-  message.username = JSON.stringify(name.slice(name.indexOf('=') + 1));
+  message.username = app._username;
   message.text = messageText;
-  message.roomname = 'Some room.';
+  message.roomname = app._currentRoom;
   $.ajax({
     // always use this url
     url: 'https://api.parse.com/1/classes/chatterbox',
@@ -58,13 +62,19 @@ app.escapeHTML = function(s) {
 
 app.fetch = function(){
   $.ajax({
-    url: 'https://api.parse.com/1/classes/chatterbox?order=createdAt',
+    url: 'https://api.parse.com/1/classes/chatterbox?order=-createdAt',
     type: 'GET',
     success: function (data) {
-      for(var i = 0; i < data.results.length; i++){
+      var i;
+      for(i = 0; i < data.results.length; i++){
+        if(data.results[i].objectId === app.lastMessage){
+          break;
+        }
+      }
+      for(i = i - 1; i >= 0; i--){
         app.addMessage(data.results[i]);
       }
-      console.dir(data);
+      app.lastMessage = data.results[0].objectId;
     },
     error : function (data) {
       console.error('chatterbox: Failed to get message');
@@ -77,14 +87,32 @@ app.clearMessages = function(){
 };
 
 app.addMessage = function(message){
-  var msg = '<p>' + message.username + ': ' + app.escapeHTML(message.text) + '</p>';
-  $('#chats').append(msg);
+  var room = message.roomname;
+  app.addRoom(room);
+  var msg = '<li class = "message ' + app.escapeHTML(room).replace(/[\s%]/g,'') + '">' + app.escapeHTML(message.username) + ': ' + app.escapeHTML(message.text) + '</li>';
+  var $msg = $(msg);
+  if(app.escapeHTML(room).replace(/[\s%]/g,'') !== app._currentRoom){
+    $msg.hide();
+  }
+  $('#chats').prepend($msg);
 };
 
 app.addRoom = function(roomName){
-  app.rooms[roomName] = true;
-  var room = '<p>' + roomName + '</p>';
-  $('#roomSelect').append(room);
+  var key = app.escapeHTML(roomName).replace(/[\s%]/g,'');
+  if(!(key in app.rooms)){
+    app.rooms[key] = roomName;
+    var room = '<p><a href="#'+ key +'">' + roomName + '</a></p>';
+    var $room = $(room);
+    $room.on('click',function(e){
+      e.preventDefault();
+      app._currentRoom = key;
+      $('.message.' + key).show();
+      $('.message').not('.' + key).hide();
+    });
+    $('#roomSelect').append($room);
+  }
 };
 
-app.init();
+$(document).ready(function(){
+  app.init();
+});
