@@ -5,9 +5,10 @@ var app = {};
 
 app.init = function(){
 
-  app.rooms = {"lobby":true};
-
+  app.rooms = {};
+  app.friends = {};
   app._currentRoom = "lobby";
+  app.addRoom("lobby");
 
   app.server = 'https://api.parse.com/1/classes/chatterbox';
   $('button.submit').on('click',function(){
@@ -56,8 +57,12 @@ app.send = function(messageText){
   });
 };
 
-app.escapeHTML = function(s) {
-  return String(s).replace(/&(?!\w+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+app.sanitize = function(mallory, replaceSpaces) {
+  var cleaned = String(mallory).replace(/&(?!\w+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  if (replaceSpaces) {
+    cleaned = cleaned.replace(/[\s%"'&;]/g,'');
+  }
+  return cleaned;
 };
 
 app.fetch = function(){
@@ -89,16 +94,35 @@ app.clearMessages = function(){
 app.addMessage = function(message){
   var room = message.roomname;
   app.addRoom(room);
-  var msg = '<li class = "message ' + app.escapeHTML(room).replace(/[\s%]/g,'') + '">' + app.escapeHTML(message.username) + ': ' + app.escapeHTML(message.text) + '</li>';
-  var $msg = $(msg);
-  if(app.escapeHTML(room).replace(/[\s%]/g,'') !== app._currentRoom){
+  var $userName = $("<span></span>").addClass('username')
+                                    //.data('username', app.sanitize(message.username, true))
+                                    .addClass(app.sanitize(message.username,true))
+                                    .text(message.username);
+  var $msg = $('<li></li>').text(': ' + message.text)
+                           .addClass('message')
+                           .addClass(app.sanitize(room,true))
+                           .prepend($userName);
+  if(app.sanitize(room, true) !== app._currentRoom){
     $msg.hide();
   }
+  if(app.friends[app.sanitize(message.username,true)]){
+    $userName.addClass('friend');
+  }
+  $userName.on('click', function() {
+    var username = app.sanitize($(this).text(), true);
+    if (username in app.friends) {
+      delete app.friends[username];
+      $('.username.' + username).removeClass('friend');
+    } else {
+      app.friends[username] = true;
+      $('.username.' + username).addClass('friend');
+    }
+  });
   $('#chats').prepend($msg);
 };
 
 app.addRoom = function(roomName){
-  var key = app.escapeHTML(roomName).replace(/[\s%]/g,'');
+  var key = app.sanitize(roomName, true);
   if(!(key in app.rooms)){
     app.rooms[key] = roomName;
     var room = '<p><a href="#'+ key +'">' + roomName + '</a></p>';

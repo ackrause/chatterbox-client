@@ -93,3 +93,11 @@ form input[type=text] {
   float:left;
   width: 45%;
 }
+
+.username {
+  cursor: pointer;
+}
+
+.friend {
+  font-weight: bold;
+}
